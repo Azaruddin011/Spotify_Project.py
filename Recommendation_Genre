@@ -1,0 +1,232 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn import preprocessing
+from sklearn import metrics
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from sklearn.decomposition import PCA, KernelPCA, TruncatedSVD
+from sklearn.manifold import Isomap, TSNE, MDS
+import random
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+import warnings 
+warnings.simplefilter("ignore")
+data = pd.read_parquet('/Users/azaruddin.sk/Downloads/0000.parquet')
+data
+
+#data.iloc[:,:20]
+#data.iloc[:,21:]  #this is for the 21st column
+
+#data.info()
+
+data.nunique()     # number of unique values in our data set.
+
+df = data.drop(["Unnamed: 0","artists","track_id","track_name", "duration_ms","album_name","popularity","duration_ms","explicit","time_signature"], axis =1)
+df
+
+df.describe()
+df.info()
+df["track_genre"].value_counts()
+
+ax = sns.histplot(df["track_genre"])
+_ = plt.xticks(rotation=60)
+_ = plt.title("Genres")
+
+plt.subplots(figsize=(10,9))
+sns.heatmap(df.corr(), cmap='coolwarm', annot=True)
+plt.show()
+
+
+x = df.loc[:,:"tempo"]
+y = df["track_genre"]
+y.unique()
+
+k=0
+plt.figure(figsize = (18,14))
+for i in x.columns:
+    plt.subplot(4,4, k + 1)
+    sns.distplot(x[i])
+    plt.xlabel(i, fontsize=11)
+    k +=1
+
+xtrain, xtest, ytrain, ytest = train_test_split(x, y,
+test_size= 0.2, random_state=42, shuffle = True)
+
+xtrain.columns
+
+xtrain.describe()
+
+col = xtrain.columns
+scalerx = MinMaxScaler()
+xtrain = scalerx.fit_transform(xtrain)
+xtest = scalerx.transform(xtest)
+xtrain = pd.DataFrame(xtrain, columns = col)
+xtest = pd.DataFrame(xtest, columns = col)
+xtrain.describe()
+
+xtest.describe()
+
+le = preprocessing.LabelEncoder()
+
+ytrain = le.fit_transform(ytrain)
+
+ytest = le.transform(ytest)
+
+x = pd.concat([xtrain, xtest], axis = 0)
+
+y = pd.concat([pd.DataFrame(ytrain), pd.DataFrame(ytest)], axis = 0)
+
+y_train = le.inverse_transform(ytrain)
+
+y_test = le.inverse_transform(ytest)
+
+y_org = pd.concat([pd.DataFrame(y_train), pd.DataFrame(y_test)], axis = 0)
+
+np.unique(y_train)
+
+plt.subplots(figsize=(8,6))
+
+ax = sns.heatmap(xtrain.corr()).set(title = "Correlation between Features")
+
+pca = PCA(n_components=2)
+x_pca = pca.fit_transform(x, y)
+plot_pca = plt.scatter(x_pca[:,0], x_pca[:,1], c=y)
+handles, labels = plot_pca.legend_elements()
+lg = plt.legend(handles, list(np.unique(y_org)), loc = 'center right', bbox_to_anchor=(1.4, 0.5))
+plt.xlabel("PCA 1")
+plt.ylabel("PCA 2")
+_ = plt.title("PCA")
+
+tsne = TSNE(n_components=2)
+x_tsne = tsne.fit_transform(x, y)
+plot_tsne = plt.scatter(x_tsne[:,0], x_tsne[:,1], c=y)
+handles, labels = plot_tsne.legend_elements()
+lg = plt.legend(handles, list(np.unique(y_org)), loc = 'center right', bbox_to_anchor=(1.4, 0.5))
+plt.xlabel("T-SNE 1")
+plt.ylabel("T-SNE 2")
+_ = plt.title("T-SNE")
+
+svd = TruncatedSVD(n_components=2)
+x_svd = svd.fit_transform(x, y)
+plot_svd = plt.scatter(x_svd[:,0], x_svd[:,1], c=y)
+handles, labels = plot_svd.legend_elements()
+lg = plt.legend(handles, list(np.unique(y_org)), loc = 'center right', bbox_to_anchor=(1.4, 0.5))
+plt.xlabel("Truncated SVD 1")
+plt.ylabel("Truncated SVD 2")
+_ = plt.title("Truncated SVD")
+
+lda = LinearDiscriminantAnalysis(n_components=2)
+x_lda = lda.fit_transform(x, y.values.ravel())
+plot_lda = plt.scatter(x_lda[:,0], x_lda[:,1], c=y)
+handles, labels = plot_lda.legend_elements()
+lg = plt.legend(handles, list(np.unique(y_org)), loc = 'center right', bbox_to_anchor=(1.4, 0.5))
+plt.xlabel("LDA 1")
+plt.ylabel("LDA 2")
+_ = plt.title("Linear Discriminant Analysis")
+
+df = df.replace("Trap Metal", "Rap")
+df = df.replace("Underground Rap", "Rap")
+df = df.replace("Emo", "Rap")
+df = df.replace("RnB", "Rap")
+df = df.replace("Hiphop", "Rap")
+df = df.replace("Dark Trap", "Rap")
+
+plt.subplots(figsize=(8,6))
+ax = sns.histplot(df["track_genre"])
+_ = plt.xticks(rotation=30)
+_ = plt.title('Genres')
+
+rows_drop = [] 
+
+for i in range(len(df)): 
+  if df.iloc[i]['track_genre'] == 'Rap': 
+    if random.random()<0.85: 
+      rows_drop.append(i) 
+df.drop(index = rows_drop, inplace=True) 
+
+ax = sns.histplot(df["track_genre"]) 
+_ = plt.xticks(rotation=30) 
+_ = plt.title("Genres")
+
+x = df.loc[:,:"tempo"]
+y = df["track_genre"]
+
+xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size= 0.2, 
+                                       random_state=42, shuffle = True)
+
+col = xtrain.columns
+scalerx = MinMaxScaler()
+
+xtrain = scalerx.fit_transform(xtrain)
+xtest = scalerx.transform(xtest)
+
+xtrain = pd.DataFrame(xtrain, columns = col)
+xtest = pd.DataFrame(xtest, columns = col)
+le = preprocessing.LabelEncoder()
+ytrain = le.fit_transform(ytrain)
+ytest = le.transform(ytest)
+
+x = pd.concat([xtrain, xtest], axis = 0)
+y = pd.concat([pd.DataFrame(ytrain), pd.DataFrame(ytest)], axis = 0)
+
+y_train = le.inverse_transform(ytrain)
+y_test = le.inverse_transform(ytest)
+y_org = pd.concat([pd.DataFrame(y_train), pd.DataFrame(y_test)], axis = 0)
+
+early_stopping1 = keras.callbacks.EarlyStopping(monitor = "val_loss",patience = 10, restore_best_weights = True)
+early_stopping2 = keras.callbacks.EarlyStopping(monitor = "val_accuracy", patience = 10, restore_best_weights = True)
+
+model = keras.Sequential([
+    keras.layers.Input(name = "input", shape = (xtrain.shape[1],)),
+    keras.layers.Dense(256, activation = "relu"),
+    keras.layers.BatchNormalization(),
+    keras.layers.Dropout(0.2),
+    keras.layers.Dense(128, activation = "relu"),
+    keras.layers.Dense(128, activation = "relu"),
+    keras.layers.BatchNormalization(),
+    keras.layers.Dropout(0.2),
+    keras.layers.Dense(64, activation = "relu"),
+    keras.layers.Dense(max(ytrain)+1, activation = "softmax")
+])
+
+model.summary()
+
+model.compile(optimizer = keras.optimizers.Adam(),
+            loss = "sparse_categorical_crossentropy",
+            metrics = ["accuracy"])
+
+model_history = model.fit(xtrain, ytrain,
+                epochs = 100,
+                verbose = 1, batch_size = 128,
+                validation_data = (xtest, ytest),
+                callbacks = [early_stopping1, early_stopping2])
+
+print(model.evaluate(xtrain, ytrain))
+print(model.evaluate(xtest, ytest))
+
+plt.plot(model_history.history["loss"])
+plt.plot(model_history.history["val_loss"])
+plt.legend(["loss", "validation loss"], loc ="upper right")
+plt.title("Train and Validation Loss")
+plt.xlabel("epoch")
+plt.ylabel("Sparse Categorical Cross Entropy")
+plt.show()
+
+plt.plot(model_history.history["accuracy"])
+plt.plot(model_history.history["val_accuracy"])
+plt.legend(["accuracy", "validation accuracy"], loc ="upper right")
+plt.title("Train and Validation Accuracy")
+plt.xlabel("epoch")
+plt.ylabel("Accuracy")
+plt.show()
+
+ypred = model.predict(xtest).argmax(axis=1)
+
+cf_matrix = metrics.confusion_matrix(ytest, ypred)
+_ = sns.heatmap(cf_matrix, fmt=".0f", annot=True)
+_ = plt.title("Confusion Matrix")
+
+print(metrics.classification_report(ytest, ypred))
